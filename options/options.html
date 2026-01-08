@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Job Tracker Options</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="container card">
+    <h1>Job Tracker Options</h1>
+    <section class="card">
+      <h2>Theme</h2>
+      <select id="themeSelect">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="contrast">High Contrast</option>
+      </select>
+    </section>
+    <section class="card">
+      <h2>Extension icon</h2>
+      <div class="icons">
+        <label><input type="radio" name="icon" value="../icons/default.png" checked /> Default</label>
+        <label><input type="radio" name="icon" value="../icons/icon1.png" /> Icon 1</label>
+        <label><input type="radio" name="icon" value="../icons/icon2.png" /> Icon 2</label>
+        <label><input type="radio" name="icon" value="../icons/icon3.png" /> Icon 3</label>
+        <label><input type="radio" name="icon" value="../icons/icon4.png" /> Icon 4</label>
+      </div>
+      <button id="applyIconBtn" class="btn">Apply icon</button>
+    </section>
+    <section class="card">
+      <h2>Users</h2>
+      <div id="usersList" class="users"></div>
+    </section>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

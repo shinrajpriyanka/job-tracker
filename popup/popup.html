@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Job Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="header card">
+      <h1>Job Tracker</h1>
+      <div class="header-right">
+        <div class="login-row">
+          <div class="login-form">
+            <input id="usernameInput" type="text" placeholder="Login username" aria-label="Login username" />
+            <button id="loginBtn" class="btn btn-primary">Login</button>            
+          </div>
+          <small id="loginStatus" class="muted"></small>
+        </div>
+        <div class="theme-options">
+          <label><input type="radio" name="theme" value="light" checked /> Light</label>
+          <label><input type="radio" name="theme" value="dark" /> Dark</label>
+          <label><input type="radio" name="theme" value="contrast" /> Contrast</label>
+        </div>
+      </div>
+    </header>
+
+    <section class="current-page card">
+      <div class="section-header">
+  <h2>Current job</h2>
+  <p id="limitPrompt" class="prompt hidden"></p>
+  <div class="section-actions">
+    <button id="manualNewBtn" class="btn btn-icon" type="button">＋ New</button>
+    <button id="trackBtn" class="btn btn-accent" type="button">Save</button>
+  </div>
+</div>
+      <form id="jobForm">
+        <div class="grid">
+          <input type="hidden" id="jobId" value="" />
+          <label>Application Date
+            <input type="date" id="applicationDate" required />
+          </label>
+          <label>Country Name
+            <input type="text" id="countryName" />
+          </label>
+          <label>Company Name
+            <input type="text" id="companyName" required />
+          </label>
+          <label>Recruiter Info
+            <input type="text" id="recruiter" />
+          </label>
+          <label>Job Title
+            <input type="text" id="jobTitle" required />
+          </label>
+          <label>Job Portal Link
+            <input type="url" id="jobLink" required />
+          </label>
+          <label>Status
+            <select id="status">
+              <option>Applied</option>
+              <option>Interview</option>
+              <option>Offer</option>
+              <option>Rejected</option>
+              <option>On Hold</option>
+            </select>
+          </label>
+          <label>Response Remarks
+            <input type="text" id="responseRemarks" />
+          </label>
+        </div>
+        <div class="actions">
+        <!-- Save moved to header; keep actions wrapper for spacing if needed -->
+        </div>
+      </form>
+    </section>
+
+    <section class="table-section card">
+      <div class="table-section-header">
+        <h2>Saved jobs</h2>
+        <div class="table-search" id="table-search">
+          <label for="searchInput" class="label-inline">Search / Filter</label>
+          <input id="searchInput" type="text" placeholder="Company, title, status, country..." />
+        </div>
+        <div class="save-options" id="save-options">
+          <button id="exportBtn" class="btn">Export to Excel</button>
+          <button id="clearAllBtn" class="btn btn-danger">Clear All</button>
+        </div>
+      </div>
+      
+      <table id="jobsTable" aria-label="Saved jobs">
+        <thead>
+          <tr>
+            <th>Sr. No</th>
+            <th>Application Date</th>
+            <th>Country Name</th>
+            <th>Company Name</th>
+            <th>Recruiter Info</th>
+            <th>Job Title</th>
+            <th>Job Portal Link</th>
+            <th>Status</th>
+            <th>Response Remarks</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jobsTbody"></tbody>
+      </table>
+      <div id="emptyState" class="muted">No jobs yet. Save from a job page or use "New".</div>
+    </section>
+
+    <footer class="footer">
+      <small class="muted">Data is stored locally via IndexedDB. No external services are used. This extension bundles a third-party library (SheetJS) for Excel export.</small>
+      <div>
+        <a href="#" id="feedbackLink" class="muted" style="margin-left:8px; font-size:0.9em;">Feedback / Report an issue</a>
+      </div>
+    </footer>
+
+    <!-- Feedback modal (hidden by default) -->
+    <div id="feedbackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;color:#000;padding:16px;border-radius:6px;max-width:420px;margin:auto;box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+        <h3 style="margin:0 0 8px 0;">Send Feedback / Report an issue</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="feedbackName" placeholder="Your name" style="padding:8px;border:1px solid #ccc;border-radius:4px;" />
+          <input id="feedbackEmail" placeholder="Your email" style="padding:8px;border:1px solid #ccc;border-radius:4px;" />
+          <textarea id="feedbackDesc" placeholder="Describe the issue or feedback" rows="6" style="padding:8px;border:1px solid #ccc;border-radius:4px;"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="feedbackCancel" class="btn">Cancel</button>
+            <button id="feedbackSend" class="btn btn-primary">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="libs/xlsx.full.min.js"></script>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

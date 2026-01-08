@@ -1,0 +1,86 @@
+:root {
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --border: #e5e7eb;
+  --table-header: #f3f4f6;
+  --font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+html[data-theme="dark"] {
+  --bg: #0b1020;
+  --fg: #e5e7eb;
+  --muted: #94a3b8;
+  --primary: #60a5fa;
+  --border: #1f2937;
+  --table-header: #111827;
+}
+
+html[data-theme="contrast"] {
+  --bg: #000;
+  --fg: #fff;
+  --muted: #ddd;
+  --primary: #ffd000;
+  --border: #888;
+  --table-header: #111;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+h1 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+h2 { font-size: 1rem; margin-top: 0; }
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--table-header);
+  color: var(--fg);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.btn:hover { filter: brightness(0.95); transform: translateY(-1px); }
+
+.icons {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.users {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-height: 40px;
+}
+
+.user-pill {
+  display: inline-block;
+  background: var(--table-header);
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  margin: 0.25rem;
+  font-size: 0.85rem;
+}
