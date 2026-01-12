@@ -36,10 +36,14 @@
   "options_page": "options/options.html",
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content/site-parsers.js", "content/content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/site-parsers.js",
+        "content/content.js"
+      ],
       "run_at": "document_end"
     }
   ]
 }
-

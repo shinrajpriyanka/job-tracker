@@ -6,48 +6,83 @@ import {
   saveSetting,
   getSetting,
   saveUser,
-  getUser
+  getUser,
+  searchJobs,
+  getJob
 } from '../db/indexeddb.js';
 
 let currentUser = null;
-let displayLimit = 10;
-let inMemoryRows = [];
+let currentPage = 1;
+const pageSize = 10;
 let isManualNew = false;
+let hasNextPage = false;
 
-document.addEventListener('DOMContentLoaded', () => {
-  const themeInputs = document.querySelectorAll('input[name="theme"]');
+document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize theme
+  await initTheme();
 
-  const applyTheme = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
-  };
+  // Initialize login
+  await initLogin();
 
-  // initialize from storage (default to light)
-  const stored = localStorage.getItem('theme') || 'light';
-  applyTheme(stored);
-  const initial = Array.from(themeInputs).find(i => i.value === stored);
-  if (initial) initial.checked = true;
+  // Login button
+  document.getElementById('loginBtn').addEventListener('click', onLogin);
 
-  // listen for changes
-  themeInputs.forEach(input => {
-    input.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        applyTheme(e.target.value);
-        localStorage.setItem('theme', e.target.value);
-      }
-    });
-  });
+  // Manual new button
+  document.getElementById('manualNewBtn').addEventListener('click', onManualNew);
+
+  // Track button
+  document.getElementById('trackBtn').addEventListener('click', onTrackAdd);
+
+  // Export button
+  document.getElementById('exportBtn').addEventListener('click', onExport);
+
+  // Clear all button
+  document.getElementById('clearAllBtn').addEventListener('click', onClearAll);
+
+  // Feedback link / modal handlers
+  const feedbackLink = document.getElementById('feedbackLink');
+  if (feedbackLink) feedbackLink.addEventListener('click', (e) => { e.preventDefault(); openFeedbackForm(); });
+  const feedbackCancel = document.getElementById('feedbackCancel');
+  if (feedbackCancel) feedbackCancel.addEventListener('click', (e) => { e.preventDefault(); closeFeedbackForm(); });
+  const feedbackSend = document.getElementById('feedbackSend');
+  if (feedbackSend) feedbackSend.addEventListener('click', (e) => { e.preventDefault(); sendFeedbackViaMailto(); });
+
+  // Search input
+  document.getElementById('searchInput').addEventListener('input', debounce(onSearch, 300));
+
+  // Load page defaults
+  await loadPageDefaults();
+
+  // render initial pagination controls
+  renderPaginationControls();
 });
+
+
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 async function initTheme() {
   const saved = await getSetting('theme');
   const theme = saved || 'light';
   document.documentElement.setAttribute('data-theme', theme);
-  //document.getElementById('themeSelect').value = theme;
-}
 
-async function initLimit() {
-  const saved = await getSetting('displayLimit');
-  displayLimit = saved || 10;
-  document.getElementById('limitSelect').value = String(displayLimit);
+  const themeInputs = document.querySelectorAll('input[name="theme"]');
+  const initial = Array.from(themeInputs).find(i => i.value === theme);
+  if (initial) initial.checked = true;
+
+  themeInputs.forEach(input => {
+    input.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        document.documentElement.setAttribute('data-theme', e.target.value);
+        saveSetting('theme', e.target.value);
+      }
+    });
+  });
 }
 
 async function initLogin() {
@@ -58,6 +93,11 @@ async function initLogin() {
       currentUser = userObj.username;
       document.getElementById('usernameInput').value = currentUser;
       setLoginStatus(`Logged in as ${currentUser}`);
+
+      // Remove error highlight if any
+      const loginBtn = document.getElementById('loginBtn');
+      loginBtn.classList.remove('btn-error-pulse');
+
       await refreshJobs();
     }
   }
@@ -77,10 +117,15 @@ async function onLogin() {
   await saveSetting('currentUser', username);
   currentUser = username;
   setLoginStatus(`Logged in as ${currentUser}`);
+
+  // Remove error highlight
+  const loginBtn = document.getElementById('loginBtn');
+  loginBtn.classList.remove('btn-error-pulse');
+
+  currentPage = 1;
   await refreshJobs();
 }
 
-// inside loadPageDefaults()
 async function loadPageDefaults() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
@@ -96,7 +141,6 @@ async function loadPageDefaults() {
   }
 }
 
-
 function defaultForm(url) {
   return {
     applicationDate: new Date().toISOString().slice(0, 10),
@@ -110,7 +154,21 @@ function defaultForm(url) {
   };
 }
 
+// Helper to manage inline form errors
+function showFormError(msg) {
+  const el = document.getElementById('formError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function clearFormError() {
+  const el = document.getElementById('formError');
+  el.textContent = '';
+  el.classList.add('hidden');
+}
+
 function fillForm(data) {
+  clearFormError(); // Clear any previous errors when filling form
   document.getElementById('applicationDate').value = data.applicationDate || new Date().toISOString().slice(0, 10);
   document.getElementById('countryName').value = data.countryName || '';
   document.getElementById('companyName').value = data.companyName || '';
@@ -136,26 +194,6 @@ function onManualNew() {
   });
 }
 
-async function onSave(e) {
-  e.preventDefault();
-  if (!currentUser) {
-    setLoginStatus('Please login before saving.');
-    return;
-  }
-  const job = formToJob();
-  job.user = currentUser;
-
-  const saved = await addOrUpdateJob(job);
-  upsertInMemory(saved);
-
-  const todays = (await getJobsByUser(currentUser)).filter(j => j.applicationDate === job.applicationDate);
-  if (todays.length > 10) {
-    toast('🎉 Hurray! You’ve applied to more than 10 jobs today. Keep pushing forward!', 'success');
-  }
-  enforceLimit();
-  await refreshJobs();
-}
-
 function formToJob() {
   const job = {
     applicationDate: document.getElementById('applicationDate').value,
@@ -175,39 +213,40 @@ function formToJob() {
   return job;
 }
 
-function upsertInMemory(job) {
-  const idx = inMemoryRows.findIndex(r => r.id === job.id);
-  if (idx >= 0) inMemoryRows[idx] = job;
-  else inMemoryRows.unshift(job);
-}
-
 async function refreshJobs() {
-  if (!currentUser) return;
-  const jobs = await getJobsByUser(currentUser);
-  inMemoryRows = jobs.sort((a, b) => {
-    // Prefer recently updated records first
-    const aUpdated = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-    const bUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-    if (bUpdated !== aUpdated) return bUpdated - aUpdated;
-    // Fallback to applicationDate descending
-    return new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime();
+  if (!currentUser) {
+    renderTable([]);
+    return;
+  }
+
+  const query = document.getElementById('searchInput').value.trim();
+  const offset = (currentPage - 1) * pageSize;
+
+  const { jobs, hasMore } = await searchJobs({
+    user: currentUser,
+    query,
+    limit: pageSize,
+    offset
   });
-  renderTable();
+
+  hasNextPage = hasMore;
+  renderTable(jobs);
+  updatePaginationUI();
 }
 
-function renderTable() {
+function renderTable(rows) {
   const tbody = document.getElementById('jobsTbody');
   const emptyState = document.getElementById('emptyState');
   const emptyStateSaveOptions = document.getElementById('save-options');
   const emptyStateSearch = document.getElementById('table-search');
-  tbody.innerHTML = '';
-  const filtered = filterRows(inMemoryRows);
-  const rowsToShow = filtered; // show all persisted rows
+  const emptyStateSearchValue = document.getElementById('table-search').textContent;
 
-  rowsToShow.forEach((row, i) => {
+  tbody.innerHTML = '';
+
+  rows.forEach((row, i) => {
+    // Sr. No is global index if possible, but for pagination 1-10 is ok or (page-1)*10 + i + 1
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${i + 1}</td>
       <td>${escapeHtml(row.applicationDate)}</td>
       <td>${escapeHtml(row.countryName)}</td>
       <td>${escapeHtml(row.companyName)}</td>
@@ -217,16 +256,27 @@ function renderTable() {
       <td>${escapeHtml(row.status)}</td>
       <td>${escapeHtml(row.responseRemarks)}</td>
       <td>
-        <button class="btn" data-action="edit" data-id="${row.id}">Edit</button>
-        <button class="btn btn-danger" data-action="delete" data-id="${row.id}">Delete</button>
+        <button class="btn-icon-only" data-action="edit" data-id="${row.id}" title="Edit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+        <button class="btn-icon-only btn-danger-icon" data-action="delete" data-id="${row.id}" title="Delete">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 
-  emptyState.style.display = rowsToShow.length ? 'none' : 'block';
-  emptyStateSaveOptions.style.display = rowsToShow.length ? 'block' : 'none';
-  emptyStateSearch.style.display = rowsToShow.length ? 'block' : 'none';
+  // Decide when to show empty state
+  // logic: if rows are empty AND current page is 1, show empty state (of no jobs)
+  // if rows are empty but page > 1, it's just a blank page (shouldn't happen with hasNextPage logic)
+  const isListEmpty = rows.length === 0 && currentPage === 1;
+
+  emptyState.style.display = (isListEmpty && !emptyStateSearchValue) ? 'block' : 'none';
+  // Always show search/options if logged in, or at least if we have ever saved a job?
+  // Previous logic hid them if no jobs. We'll keep them visible or follow prior:
+  emptyStateSaveOptions.style.display = (isListEmpty && !emptyStateSearchValue) ? 'none' : 'block';
+  emptyStateSearch.style.display = (isListEmpty && !emptyStateSearchValue) ? 'none' : 'block';
 
   tbody.querySelectorAll('button[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => onEdit(btn.dataset.id));
@@ -234,34 +284,66 @@ function renderTable() {
   tbody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
     btn.addEventListener('click', () => onDelete(btn.dataset.id));
   });
-
-  // remove limit/prompt handling (no UI cap)
 }
 
-function filterRows(rows) {
-  const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter(r => {
-    const tokens = [
-      r.companyName, r.jobTitle, r.status, r.countryName, r.responseRemarks, r.recruiter, r.jobLink
-    ].map(x => (x || '').toLowerCase());
-    return tokens.some(t => t.includes(q));
+function renderPaginationControls() {
+  // If not already existing, append to table section
+  let paginationDiv = document.getElementById('paginationControls');
+  if (!paginationDiv) {
+    const tableSection = document.querySelector('.table-section');
+    paginationDiv = document.createElement('div');
+    paginationDiv.id = 'paginationControls';
+    paginationDiv.className = 'pagination-controls';
+    tableSection.appendChild(paginationDiv);
+  }
+}
+
+function updatePaginationUI() {
+  const div = document.getElementById('paginationControls');
+  if (!div) return;
+
+  // logic: Prev if > 1, Next if hasMore
+  // Show "Page X"
+  if (!currentUser || (currentPage === 1 && !hasNextPage)) {
+    div.style.display = 'none';
+    return;
+  }
+  div.style.display = 'flex';
+
+  div.innerHTML = `
+        <button id="prevPageBtn" class="btn" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+        <span class="page-info">Page ${currentPage}</span>
+        <button id="nextPageBtn" class="btn" ${!hasNextPage ? 'disabled' : ''}>Next</button>
+    `;
+
+  document.getElementById('prevPageBtn').addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      refreshJobs();
+    }
+  });
+
+  document.getElementById('nextPageBtn').addEventListener('click', () => {
+    if (hasNextPage) {
+      currentPage++;
+      refreshJobs();
+    }
   });
 }
 
 function onSearch() {
-  renderTable();
-}
-
-function enforceLimit() {
-  // UI-only limit; data is persisted by default.
+  currentPage = 1;
+  refreshJobs();
 }
 
 async function onEdit(id) {
-  const row = inMemoryRows.find(r => r.id === id);
+  const row = await getJob(id);
   if (!row) return;
   document.getElementById('jobId').value = id;
   fillForm(row);
+
+  // Scroll to form
+  document.querySelector('.current-page').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function onDelete(id) {
@@ -274,30 +356,18 @@ async function onClearAll() {
     setLoginStatus('Please login to clear.');
     return;
   }
-
-  // Prompt user for confirmation
   const confirmed = confirm(`Are you sure you want to clear all jobs for ${currentUser}? This will export them to Excel first.`);
-  if (!confirmed) {
-    return;
-  }
+  if (!confirmed) return;
 
   try {
-    // Check if SheetJS library is available
     if (typeof XLSX === 'undefined') {
       toast('Excel export library not loaded. Cannot backup before clearing.', 'error');
       return;
     }
-
-    // Get jobs for current user
     const jobs = await getJobsByUser(currentUser);
-
     if (jobs.length > 0) {
-      // Sort jobs by application date
       jobs.sort((a, b) => new Date(a.applicationDate) - new Date(b.applicationDate));
-
-      // Prepare data for Excel
       const excelData = jobs.map((job, index) => ({
-        'Sr. No': index + 1,
         'Application Date': job.applicationDate || '',
         'Country Name': job.countryName || '',
         'Company Name': job.companyName || '',
@@ -307,26 +377,16 @@ async function onClearAll() {
         'Status': job.status || '',
         'Response Remarks': job.responseRemarks || ''
       }));
-
-      // Create workbook and worksheet
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Jobs');
-
-      // Generate filename with current date and timestamp
       const filename = `jobs-backup-${currentUser}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-
-      // Write Excel file
       XLSX.writeFile(workbook, filename);
       toast('Backup exported to Excel.', 'success');
     }
-
-    // Clear all jobs for the user
     await clearJobsForUser(currentUser);
     await refreshJobs();
-    //toast('All data cleared.', 'success');
   } catch (err) {
-    console.error('Clear all error:', err);
     toast('Error clearing data.', 'error');
   }
 }
@@ -336,29 +396,18 @@ async function onExport() {
     toast('Please login to export.', 'error');
     return;
   }
-
   try {
-    // Check if SheetJS library is available
     if (typeof XLSX === 'undefined') {
-      toast('Excel export library not loaded. Please refresh and try again.', 'error');
-      console.error('XLSX library not available');
+      toast('Excel export library not loaded.', 'error');
       return;
     }
-
-    // Get jobs for current user
     const jobs = await getJobsByUser(currentUser);
-
     if (jobs.length === 0) {
       toast('No jobs to export.', 'error');
       return;
     }
-
-    // Sort jobs by application date
     jobs.sort((a, b) => new Date(a.applicationDate) - new Date(b.applicationDate));
-
-    // Prepare data for Excel
     const excelData = jobs.map((job, index) => ({
-      'Sr. No': index + 1,
       'Application Date': job.applicationDate || '',
       'Country Name': job.countryName || '',
       'Company Name': job.companyName || '',
@@ -368,28 +417,20 @@ async function onExport() {
       'Status': job.status || '',
       'Response Remarks': job.responseRemarks || ''
     }));
-
-    // Create workbook and worksheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Jobs');
-
-    // Generate filename with current date
     const filename = `jobs-${currentUser}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-
-    // Write Excel file
     XLSX.writeFile(workbook, filename);
-
     toast('Excel file exported successfully!', 'success');
   } catch (err) {
-    console.error('Export error:', err);
     toast('Error exporting to Excel.', 'error');
   }
 }
 
 function toast(msg, kind = 'success') {
   const p = document.createElement('div');
-  p.className = `toast ${kind === 'success' ? 'toast-success' : ''}`;
+  p.className = `toast ${kind === 'success' ? 'toast-success' : 'toast-error'}`;
   p.textContent = msg;
   document.body.appendChild(p);
   setTimeout(() => p.remove(), 2500);
@@ -399,7 +440,6 @@ function toast(msg, kind = 'success') {
 function openFeedbackForm() {
   const modal = document.getElementById('feedbackModal');
   if (!modal) return;
-  // Prefill name/email if logged in
   const nameInput = document.getElementById('feedbackName');
   const emailInput = document.getElementById('feedbackEmail');
   if (currentUser) {
@@ -425,11 +465,11 @@ function sendFeedbackViaMailto() {
   const email = (document.getElementById('feedbackEmail').value || '').trim();
   const desc = (document.getElementById('feedbackDesc').value || '').trim();
   if (!desc) {
-    toast('Please enter a description for the issue or feedback.', 'error');
+    toast('Please enter a description.', 'error');
     return;
   }
   if (email && !validateEmail(email)) {
-    toast('Please enter a valid email address or leave blank.', 'error');
+    toast('Please enter a valid email.', 'error');
     return;
   }
   const subject = encodeURIComponent('Job Tracker Feedback');
@@ -442,130 +482,70 @@ function sendFeedbackViaMailto() {
   bodyParts.push('');
   bodyParts.push(`App: Job Tracker`);
   const body = encodeURIComponent(bodyParts.join('\n'));
-  // Change recipient to your support address if desired
   const recipient = 'pm837389@gmail.com';
   const mailto = `mailto:${recipient}?subject=${subject}&body=${body}`;
-  // Open user's mail client
   window.location.href = mailto;
   closeFeedbackForm();
 }
 
 function escapeHtml(s) {
-  return (s || '').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  return (s || '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 function escapeAttr(s) {
   return (s || '').toString().replace(/"/g, '&quot;');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize theme
-  await initTheme();
-  
-  // Initialize login
-  await initLogin();
-  
-  // Login button
-  document.getElementById('loginBtn').addEventListener('click', onLogin);
-  
-  // Manual new button
-  document.getElementById('manualNewBtn').addEventListener('click', onManualNew);
-  
-  // Track button
-  document.getElementById('trackBtn').addEventListener('click', onTrackAdd);
-  
-  // Export button
-  document.getElementById('exportBtn').addEventListener('click', onExport);
-  
-  // Clear all button
-  document.getElementById('clearAllBtn').addEventListener('click', onClearAll);
-
-  // Feedback link / modal handlers
-  const feedbackLink = document.getElementById('feedbackLink');
-  if (feedbackLink) feedbackLink.addEventListener('click', (e) => { e.preventDefault(); openFeedbackForm(); });
-  const feedbackCancel = document.getElementById('feedbackCancel');
-  if (feedbackCancel) feedbackCancel.addEventListener('click', (e) => { e.preventDefault(); closeFeedbackForm(); });
-  const feedbackSend = document.getElementById('feedbackSend');
-  if (feedbackSend) feedbackSend.addEventListener('click', (e) => { e.preventDefault(); sendFeedbackViaMailto(); });
-  
-  // Search input
-  document.getElementById('searchInput').addEventListener('input', onSearch);
-  
-  // Load page defaults
-  await loadPageDefaults();
-});
-
 async function onTrackAdd() {
   if (!currentUser) {
     setLoginStatus('Please login before tracking.');
+    // Highlight login button
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.classList.add('btn-error-pulse');
+    loginBtn.focus();
+    toast('Please login to save jobs.', 'error');
     return;
   }
-  
+
+  // Remove error highlight if valid
+  document.getElementById('loginBtn').classList.remove('btn-error-pulse');
+  clearFormError(); // Clear visible error if any
+
   const formData = formToJob();
   const isEditing = !!formData.id;
-  
-  // If isManualNew flag is set, create a new job without parsing page data or checking duplicates
+
   if (isManualNew) {
     const job = {
-      applicationDate: formData.applicationDate,
-      countryName: formData.countryName,
-      companyName: formData.companyName,
-      recruiter: formData.recruiter,
-      jobTitle: formData.jobTitle,
-      jobLink: formData.jobLink,
-      status: formData.status,
-      responseRemarks: formData.responseRemarks,
+      ...formData,
       user: currentUser
-      // Note: no job.id, so addOrUpdateJob will always create a new record
     };
-    
-    // Validate required fields
     if (!job.companyName || !job.jobTitle || !job.jobLink) {
-      toast('Please fill in Company Name, Job Title, and Job Link.', 'error');
+      showFormError('Please fill in Company Name, Job Title, and Job Link.');
       return;
     }
-    
-    const saved = await addOrUpdateJob(job);
-    upsertInMemory(saved);
+    await addOrUpdateJob(job);
+    currentPage = 1;
     await refreshJobs();
     toast('New job added successfully!', 'success');
-    
-    // Reset flag and form
     isManualNew = false;
     document.getElementById('jobId').value = '';
     fillForm(defaultForm(''));
     return;
   }
-  
-  // Original logic: parse page data and check for duplicates
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let parsedData = {};
-  
-  // Try to get parsed data from the page
   if (tab?.id) {
     try {
       const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_JOB_DATA' });
-      if (response?.ok && response.data) {
-        parsedData = response.data;
-      }
-    } catch (err) {
-      // Page parsing failed, will use manual form data
-    }
+      if (response?.ok && response.data) parsedData = response.data;
+    } catch (err) { }
   }
-  
-  // If editing, use form data; if new entry, merge with parsed data
+
   const job = isEditing ? {
+    ...formData,
     id: formData.id,
-    applicationDate: formData.applicationDate,
-    countryName: formData.countryName,
-    companyName: formData.companyName,
-    recruiter: formData.recruiter,
-    jobTitle: formData.jobTitle,
-    jobLink: formData.jobLink,
-    status: formData.status,
-    responseRemarks: formData.responseRemarks,
     user: currentUser
   } : {
-    // New entry: merge parsed data with form data (parsed takes priority)
     applicationDate: parsedData.applicationDate || formData.applicationDate,
     countryName: parsedData.countryName || formData.countryName,
     companyName: parsedData.companyName || formData.companyName,
@@ -576,24 +556,18 @@ async function onTrackAdd() {
     responseRemarks: parsedData.responseRemarks || formData.responseRemarks,
     user: currentUser
   };
-  
-  // Preserve job ID if editing an existing job
-  if (formData.id) {
-    job.id = formData.id;
-  }
-  
-  // Validate required fields
+
+  if (formData.id) job.id = formData.id;
+
   if (!job.companyName || !job.jobTitle || !job.jobLink) {
-    toast('Please fill in Company Name, Job Title, and Job Link.', 'error');
+    showFormError('Please fill in Company Name, Job Title, and Job Link.');
     return;
   }
-  
-  const saved = await addOrUpdateJob(job);
-  upsertInMemory(saved);
+
+  await addOrUpdateJob(job);
+  if (!isEditing) currentPage = 1;
   await refreshJobs();
   toast('Job added successfully!', 'success');
   document.getElementById('jobId').value = '';
-  fillForm(defaultForm(job.jobLink)); // Clear form for next entry
+  fillForm(defaultForm(job.jobLink));
 }
-
-

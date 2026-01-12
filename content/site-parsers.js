@@ -60,7 +60,6 @@ function parseCWJobs() {
 }
 function parseLinkedIn() {
   const firstText = (selectors) => {
-    console.log('LinkedIn selectors:', selectors);
     for (const s of selectors) {
       const t = text(s);
       if (t) return t;
@@ -82,7 +81,6 @@ function parseLinkedIn() {
   const countryName = firstText([
     '.job-details-jobs-unified-top-card__primary-description-container .tvm__text--low-emphasis'
   ]);
-  console.log('Parsed LinkedIn:', { jobTitle, companyName, countryName });
   return { jobTitle, companyName, jobLink: location.href, countryName };
 }
 function parseIndeed() {

@@ -97,11 +97,20 @@ export async function addOrUpdateJob(job) {
     updatedAt: now,
     createdAt: existing ? existing.createdAt : now
   };
-  console.log('addOrUpdateJob -> record to save:', record);
   return new Promise((resolve, reject) => {
     const store = tx(db, STORE_JOBS, 'readwrite');
     const req = store.put(record);
     req.onsuccess = () => resolve(record);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getJob(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = tx(db, STORE_JOBS);
+    const req = store.get(id);
+    req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
 }
@@ -120,8 +129,6 @@ export async function findDuplicate(job) {
         j.jobLink && job.jobLink &&
         normalizeUrl(j.jobLink) === normalizeUrl(job.jobLink)
       );
-      console.log('findDuplicate -> checking against all jobs:', all);
-      console.log('findDuplicate -> found dup:', dup);
       resolve(dup || null);
     };
     req.onerror = () => reject(req.error);
@@ -142,7 +149,7 @@ function normalizeUrl(u) {
       if (!strip) keep.append(k, v);
     }
     // canonicalize order for stability
-    const entries = Array.from(keep.entries()).sort((a,b) => a[0].localeCompare(b[0]));
+    const entries = Array.from(keep.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     const canonical = new URLSearchParams(entries);
     url.search = canonical.toString(); // will be '' if nothing left
     return url.toString();
@@ -161,8 +168,62 @@ export async function getJobsByUser(username) {
     const req = store.getAll();
     req.onsuccess = () => {
       const result = (req.result || []).filter(j => j.user === username);
-      console.log(`getJobsByUser(${username}) -> total jobs in store: ${req.result.length}, filtered for user: ${result.length}`);
       resolve(result);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function searchJobs({ user, query, limit = 10, offset = 0 }) {
+  const db = await openDB();
+  const q = (query || '').toLowerCase().trim();
+
+  return new Promise((resolve, reject) => {
+    const store = tx(db, STORE_JOBS);
+    // Use applicationDate index to sort by date descending
+    const index = store.index('applicationDate');
+    const req = index.openCursor(null, 'prev');
+
+    const results = [];
+    let skipped = 0;
+
+    req.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (!cursor) {
+        resolve({ jobs: results, hasMore: false });
+        return;
+      }
+
+      const job = cursor.value;
+
+      if (job.user !== user) {
+        cursor.continue();
+        return;
+      }
+
+      let matches = true;
+      if (q) {
+        const tokens = [
+          job.companyName, job.jobTitle, job.status, job.countryName,
+          job.responseRemarks, job.recruiter, job.jobLink
+        ].map(x => (x || '').toLowerCase());
+        matches = tokens.some(t => t.includes(q));
+      }
+
+      if (matches) {
+        if (skipped < offset) {
+          skipped++;
+          cursor.continue();
+        } else if (results.length < limit) {
+          results.push(job);
+          cursor.continue();
+        } else {
+          // Found one more than limit, so we know there are more pages
+          resolve({ jobs: results, hasMore: true });
+        }
+      } else {
+        cursor.continue();
+      }
     };
     req.onerror = () => reject(req.error);
   });

@@ -1,6 +1,5 @@
 function currentParse() {
   const parsed = window.parsePage();
-  console.log('Parsed job data from page:', parsed);
   const recruiter = detectRecruiterInfo();
   return {
     applicationDate: new Date().toISOString().slice(0, 10),
