@@ -138,14 +138,36 @@ h2 {
 }
 
 .header-brand img {
-  width: 40px;
-  height: 40px;
   object-fit: contain;
   background: linear-gradient(135deg, var(--primary-light), #fff);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 6px;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+/* ... existing code ... */
+
+/* ... (skipping to end of file for pagination) ... */
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.total-jobs {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg-secondary);
 }
 
 .header-brand h1 {
@@ -347,7 +369,6 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
   max-width: 300px;
 }
 
@@ -394,6 +415,7 @@ tbody td {
   background: var(--bg-card);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
 }
 
 tbody td:first-child {
@@ -581,7 +603,22 @@ html[data-theme="contrast"] input[type="date"]::-webkit-calendar-picker-indicato
 }
 
 .pagination-controls {
+  display: flex;
   align-items: center;
-  gap: 2rem;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.total-jobs {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg-secondary);
 }

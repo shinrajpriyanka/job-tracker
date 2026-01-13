@@ -213,24 +213,50 @@ function formToJob() {
   return job;
 }
 
+let currentTotalJobs = 0;
+
 async function refreshJobs() {
   if (!currentUser) {
     renderTable([]);
+    updatePaginationUI();
     return;
   }
 
-  const query = document.getElementById('searchInput').value.trim();
-  const offset = (currentPage - 1) * pageSize;
+  const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
 
-  const { jobs, hasMore } = await searchJobs({
-    user: currentUser,
-    query,
-    limit: pageSize,
-    offset
-  });
+  // Fetch all jobs for user to support client-side filtering and total count
+  let allJobs = await getJobsByUser(currentUser);
 
-  hasNextPage = hasMore;
-  renderTable(jobs);
+  // Filter
+  if (query) {
+    allJobs = allJobs.filter(job => {
+      const tokens = [
+        job.companyName, job.jobTitle, job.status, job.countryName,
+        job.responseRemarks, job.recruiter, job.jobLink
+      ].map(x => (x || '').toLowerCase());
+      return tokens.some(t => t.includes(query));
+    });
+  }
+
+  // Sort by date descending
+  allJobs.sort((a, b) => new Date(b.applicationDate) - new Date(a.applicationDate));
+
+  currentTotalJobs = allJobs.length;
+
+  // Pagination logic
+  const totalPages = Math.ceil(currentTotalJobs / pageSize) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const pageJobs = allJobs.slice(start, end);
+
+  // hasNextPage is simple logic now
+  hasNextPage = currentPage < totalPages;
+
+  renderPaginationControls(); // Ensure container exists
+  renderTable(pageJobs);
   updatePaginationUI();
 }
 
@@ -244,7 +270,6 @@ function renderTable(rows) {
   tbody.innerHTML = '';
 
   rows.forEach((row, i) => {
-    // Sr. No is global index if possible, but for pagination 1-10 is ok or (page-1)*10 + i + 1
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${escapeHtml(row.applicationDate)}</td>
@@ -267,14 +292,9 @@ function renderTable(rows) {
     tbody.appendChild(tr);
   });
 
-  // Decide when to show empty state
-  // logic: if rows are empty AND current page is 1, show empty state (of no jobs)
-  // if rows are empty but page > 1, it's just a blank page (shouldn't happen with hasNextPage logic)
-  const isListEmpty = rows.length === 0 && currentPage === 1;
+  const isListEmpty = rows.length === 0 && currentPage === 1 && currentTotalJobs === 0;
 
   emptyState.style.display = (isListEmpty && !emptyStateSearchValue) ? 'block' : 'none';
-  // Always show search/options if logged in, or at least if we have ever saved a job?
-  // Previous logic hid them if no jobs. We'll keep them visible or follow prior:
   emptyStateSaveOptions.style.display = (isListEmpty && !emptyStateSearchValue) ? 'none' : 'block';
   emptyStateSearch.style.display = (isListEmpty && !emptyStateSearchValue) ? 'none' : 'block';
 
@@ -287,7 +307,6 @@ function renderTable(rows) {
 }
 
 function renderPaginationControls() {
-  // If not already existing, append to table section
   let paginationDiv = document.getElementById('paginationControls');
   if (!paginationDiv) {
     const tableSection = document.querySelector('.table-section');
@@ -302,18 +321,21 @@ function updatePaginationUI() {
   const div = document.getElementById('paginationControls');
   if (!div) return;
 
-  // logic: Prev if > 1, Next if hasMore
-  // Show "Page X"
-  if (!currentUser || (currentPage === 1 && !hasNextPage)) {
+  if (!currentUser || (currentTotalJobs === 0 && !document.getElementById('searchInput').value)) {
     div.style.display = 'none';
     return;
   }
   div.style.display = 'flex';
 
+  const totalPages = Math.ceil(currentTotalJobs / pageSize) || 1;
+
   div.innerHTML = `
-        <button id="prevPageBtn" class="btn" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-        <span class="page-info">Page ${currentPage}</span>
-        <button id="nextPageBtn" class="btn" ${!hasNextPage ? 'disabled' : ''}>Next</button>
+        <span class="total-jobs">Total Jobs: ${currentTotalJobs}</span>
+        <div class="pagination-buttons">
+            <button id="prevPageBtn" class="btn" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+            <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+            <button id="nextPageBtn" class="btn" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+        </div>
     `;
 
   document.getElementById('prevPageBtn').addEventListener('click', () => {
@@ -324,7 +346,8 @@ function updatePaginationUI() {
   });
 
   document.getElementById('nextPageBtn').addEventListener('click', () => {
-    if (hasNextPage) {
+    const totalPages = Math.ceil(currentTotalJobs / pageSize) || 1;
+    if (currentPage < totalPages) {
       currentPage++;
       refreshJobs();
     }
