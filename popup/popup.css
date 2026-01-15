@@ -591,8 +591,13 @@ td:nth-child(8) {
   border-right: 14px solid transparent;
 }
 
-html[data-theme="dark"] #status,
-html[data-theme="contrast"] #status {
+html[data-theme="dark"] #status {
+  border-right: 1px solid transparent;
+}
+
+html[data-theme="dark"] #status:focus,
+html[data-theme="contrast"] #status,
+html[data-theme="contrast"] #status:focus {
   border-right: 1px solid var(--primary);
 }
 
@@ -621,4 +626,85 @@ html[data-theme="contrast"] input[type="date"]::-webkit-calendar-picker-indicato
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--fg-secondary);
+}
+
+/* Dropdown Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  z-index: 100;
+  padding: 0.5rem 0;
+  transform-origin: top right;
+  animation: scaleIn 0.15s ease-out;
+}
+
+.dropdown-menu.hidden {
+  display: none;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--fg-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-body);
+  color: var(--primary);
+}
+
+.dropdown-item.text-danger {
+  color: var(--danger);
+}
+
+.dropdown-item.text-danger:hover {
+  background: #fee2e2;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 0;
+}
+
+.dropdown-toggle .chevron {
+  font-size: 0.7em;
+  margin-left: 0.4rem;
+  transition: transform 0.2s;
+}
+
+.dropdown-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

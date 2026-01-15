@@ -16,6 +16,7 @@ let currentPage = 1;
 const pageSize = 10;
 let isManualNew = false;
 let hasNextPage = false;
+let currentDisplayedJobs = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize theme
@@ -33,11 +34,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Track button
   document.getElementById('trackBtn').addEventListener('click', onTrackAdd);
 
-  // Export button
-  document.getElementById('exportBtn').addEventListener('click', onExport);
+  // Actions Dropdown
+  const actionsMenuBtn = document.getElementById('actionsMenuBtn');
+  const actionsMenu = document.getElementById('actionsMenu');
 
-  // Clear all button
-  document.getElementById('clearAllBtn').addEventListener('click', onClearAll);
+  if (actionsMenuBtn && actionsMenu) {
+    actionsMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = actionsMenuBtn.getAttribute('aria-expanded') === 'true';
+      actionsMenuBtn.setAttribute('aria-expanded', !isExpanded);
+      actionsMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!actionsMenu.contains(e.target) && !actionsMenuBtn.contains(e.target)) {
+        actionsMenu.classList.add('hidden');
+        actionsMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Export buttons (in dropdown)
+  document.getElementById('exportBtn').addEventListener('click', () => { closeDropdown(); onExport(); });
+  document.getElementById('exportPageBtn').addEventListener('click', () => { closeDropdown(); onExportPage(); });
+
+  // Clear/Delete buttons (in dropdown)
+  document.getElementById('clearAllBtn').addEventListener('click', () => { closeDropdown(); onClearAll(); });
+  document.getElementById('deletePageBtn').addEventListener('click', () => { closeDropdown(); onDeletePage(); });
 
   // Feedback link / modal handlers
   const feedbackLink = document.getElementById('feedbackLink');
@@ -251,6 +274,7 @@ async function refreshJobs() {
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize;
   const pageJobs = allJobs.slice(start, end);
+  currentDisplayedJobs = pageJobs;
 
   // hasNextPage is simple logic now
   hasNextPage = currentPage < totalPages;
@@ -451,6 +475,70 @@ async function onExport() {
   }
 }
 
+async function onExportPage() {
+  if (!currentUser) {
+    toast('Please login to export.', 'error');
+    return;
+  }
+  try {
+    if (typeof XLSX === 'undefined') {
+      toast('Excel export library not loaded.', 'error');
+      return;
+    }
+    const jobs = currentDisplayedJobs;
+    if (jobs.length === 0) {
+      toast('No jobs on this page to export.', 'error');
+      return;
+    }
+    // Jobs are already sorted by virtue of being on the page
+    const excelData = jobs.map((job, index) => ({
+      'Application Date': job.applicationDate || '',
+      'Country Name': job.countryName || '',
+      'Company Name': job.companyName || '',
+      'Recruiter Email & Phone': job.recruiter || '',
+      'Job Title': job.jobTitle || '',
+      'Job Portal/Company Website/Link': job.jobLink || '',
+      'Status': job.status || '',
+      'Response Remarks': job.responseRemarks || ''
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Jobs_Page_' + currentPage);
+    const filename = `jobs-${currentUser}-page-${currentPage}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+    toast('Current page exported successfully!', 'success');
+  } catch (err) {
+    toast('Error exporting page.', 'error');
+    console.error(err);
+  }
+}
+
+async function onDeletePage() {
+  if (!currentUser) {
+    toast('Please login to delete.', 'error');
+    return;
+  }
+  if (currentDisplayedJobs.length === 0) {
+    toast('No jobs on this page to delete.', 'error');
+    return;
+  }
+
+  const confirmed = confirm(`Are you sure you want to delete all ${currentDisplayedJobs.length} jobs on this page (Page ${currentPage})?`);
+  if (!confirmed) return;
+
+  try {
+    for (const job of currentDisplayedJobs) {
+      await deleteJob(job.id);
+    }
+    toast('Page deleted successfully.', 'success');
+    // If page becomes empty, refreshJobs will handle adjusting currentPage if needed (though logic might need a small check, refreshJobs handles bounds)
+    await refreshJobs();
+  } catch (err) {
+    toast('Error deleting page.', 'error');
+    console.error(err);
+  }
+}
+
 function toast(msg, kind = 'success') {
   const p = document.createElement('div');
   p.className = `toast ${kind === 'success' ? 'toast-success' : 'toast-error'}`;
@@ -509,6 +597,13 @@ function sendFeedbackViaMailto() {
   const mailto = `mailto:${recipient}?subject=${subject}&body=${body}`;
   window.location.href = mailto;
   closeFeedbackForm();
+}
+
+function closeDropdown() {
+  const actionsMenu = document.getElementById('actionsMenu');
+  const actionsMenuBtn = document.getElementById('actionsMenuBtn');
+  if (actionsMenu) actionsMenu.classList.add('hidden');
+  if (actionsMenuBtn) actionsMenuBtn.setAttribute('aria-expanded', 'false');
 }
 
 function escapeHtml(s) {

@@ -90,8 +90,18 @@
           <input id="searchInput" type="text" placeholder="Search by Company, title, status, country..." />
         </div>
         <div class="save-options" id="save-options">
-          <button id="exportBtn" class="btn">Export to Excel</button>
-          <button id="clearAllBtn" class="btn btn-danger">Clear All</button>
+          <div class="dropdown" id="actionsDropdown">
+            <button class="btn dropdown-toggle" id="actionsMenuBtn">
+              Export/Delete <span class="chevron">▼</span>
+            </button>
+            <div class="dropdown-menu hidden" id="actionsMenu">
+              <button id="exportPageBtn" class="dropdown-item">Export Current Page</button>
+              <button id="deletePageBtn" class="dropdown-item text-danger">Delete Current Page</button>
+              <div class="dropdown-divider"></div>
+              <button id="exportBtn" class="dropdown-item">Export All Jobs</button>
+              <button id="clearAllBtn" class="dropdown-item text-danger">Clear All Jobs</button>
+            </div>
+          </div>
         </div>
       </div>
 
