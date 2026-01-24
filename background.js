@@ -1,6 +1,5 @@
 // Background service worker: listens for messages, manages icon changes
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-
   if (msg?.type === 'SET_ICON' && msg.iconPath) {
     chrome.action.setIcon({
       path: {
@@ -11,6 +10,5 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     });
     sendResponse({ ok: true });
-    return false;
   }
 });

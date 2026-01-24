@@ -1,6 +1,6 @@
 # Privacy Policy for Job Tracker
 
-**Last Updated:** 2024-01-13
+**Last Updated:** 2026-01-20
 
 ## 1. Data Collection & Storage
 Job Tracker is a **local-first** application.

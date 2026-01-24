@@ -1,16 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Job Tracker",
-  "version": "1.0.2",
-  "description": "Save and track job applications locally with IndexedDB, export to Excel, search/filter, and edit.",
+  "version": "1.0.0",
+  "description": "Track job applications locally. Auto-fill from job sites, manage status, export to Excel. Privacy-focused.",
   "action": {
     "default_title": "Job Tracker",
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "icons/default.png",
-      "32": "icons/default.png",
-      "48": "icons/default.png",
-      "128": "icons/default.png"
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
   "background": {
@@ -18,24 +18,64 @@
     "type": "module"
   },
   "permissions": [
-    "activeTab",
-    "storage"
+    "activeTab"
   ],
   "host_permissions": [
-    "https://*/*",
-    "http://*/*"
+    "https://www.linkedin.com/*",
+    "https://www.indeed.com/*",
+    "https://www.indeed.co.uk/*",
+    "https://www.indeed.de/*",
+    "https://www.indeed.ie/*",
+    "https://www.totaljobs.com/*",
+    "https://www.reed.co.uk/*",
+    "https://www.cwjobs.co.uk/*",
+    "https://www.jobsite.co.uk/*",
+    "https://www.fish4.co.uk/*",
+    "https://www.adzuna.co.uk/*",
+    "https://www.stepstone.de/*",
+    "https://www.monster.de/*",
+    "https://www.monster.ie/*",
+    "https://www.xing.com/*",
+    "https://ec.europa.eu/*",
+    "https://www.jobware.de/*",
+    "https://www.karriere.de/*",
+    "https://www.jobsintown.de/*",
+    "https://www.careerjet.ie/*",
+    "https://www.jobsireland.ie/*",
+    "https://www.recruitireland.com/*"
   ],
   "icons": {
-    "16": "icons/default.png",
-    "32": "icons/default.png",
-    "48": "icons/default.png",
-    "128": "icons/default.png"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "options_page": "options/options.html",
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "https://www.linkedin.com/*",
+        "https://www.indeed.com/*",
+        "https://www.indeed.co.uk/*",
+        "https://www.indeed.de/*",
+        "https://www.indeed.ie/*",
+        "https://www.totaljobs.com/*",
+        "https://www.reed.co.uk/*",
+        "https://www.cwjobs.co.uk/*",
+        "https://www.jobsite.co.uk/*",
+        "https://www.fish4.co.uk/*",
+        "https://www.adzuna.co.uk/*",
+        "https://www.stepstone.de/*",
+        "https://www.monster.de/*",
+        "https://www.monster.ie/*",
+        "https://www.xing.com/*",
+        "https://ec.europa.eu/*",
+        "https://www.jobware.de/*",
+        "https://www.karriere.de/*",
+        "https://www.jobsintown.de/*",
+        "https://www.careerjet.ie/*",
+        "https://www.jobsireland.ie/*",
+        "https://www.recruitireland.com/*"
       ],
       "js": [
         "content/site-parsers.js",

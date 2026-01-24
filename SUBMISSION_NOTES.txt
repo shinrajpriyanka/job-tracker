@@ -1,0 +1,19 @@
+CHROME WEB STORE SUBMISSION NOTES
+EXTERNAL LIBRARY JUSTIFICATION:
+This extension uses the SheetJS (xlsx) library for Excel export functionality.
+Library Details:
+- Name: SheetJS Community Edition (xlsx)
+- Version: [Check popup/libs/xlsx.full.min.js for exact version]
+- License: Apache 2.0
+- Source: https://github.com/SheetJS/sheetjs
+- Purpose: Converting job application data to Excel (.xlsx) format
+Why Bundled/Minified:
+- Library is bundled locally (not loaded from CDN) for offline functionality
+- Minified version used to reduce extension size
+- This is a well-known, widely-used library for spreadsheet generation
+- No modifications made to the library code
+The library is only used for the export feature and does not:
+- Make external network requests
+- Access user data beyond what's explicitly saved in the extension
+- Modify or track user behavior
+All other code in the extension is fully readable and unminified.

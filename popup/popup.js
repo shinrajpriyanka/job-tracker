@@ -509,7 +509,6 @@ async function onExportPage() {
     toast('Current page exported successfully!', 'success');
   } catch (err) {
     toast('Error exporting page.', 'error');
-    console.error(err);
   }
 }
 
@@ -535,7 +534,6 @@ async function onDeletePage() {
     await refreshJobs();
   } catch (err) {
     toast('Error deleting page.', 'error');
-    console.error(err);
   }
 }
 

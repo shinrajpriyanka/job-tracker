@@ -29,3 +29,50 @@ A local-first Chrome extension to track your job applications efficiently. Keep 
 ## Privacy
 
 This extension prioritizes your privacy. See [PRIVACY.md](PRIVACY.md) for details.
+
+## Supported Job Sites
+The extension auto-fills job details from these sites:
+### United Kingdom
+- [LinkedIn](https://www.linkedin.com)
+- [Indeed UK](https://www.indeed.co.uk)
+- [TotalJobs](https://www.totaljobs.com)
+- [Reed](https://www.reed.co.uk)
+- [CWJobs](https://www.cwjobs.co.uk)
+- [Jobsite](https://www.jobsite.co.uk)
+- [Fish4Jobs](https://www.fish4.co.uk)
+- [Adzuna UK](https://www.adzuna.co.uk)
+### Germany
+- [Indeed Germany](https://www.indeed.de)
+- [StepStone](https://www.stepstone.de)
+- [Monster Germany](https://www.monster.de)
+- [XING](https://www.xing.com)
+- [Jobware](https://www.jobware.de)
+- [Karriere.de](https://www.karriere.de)  
+- [JobsInTown](https://www.jobsintown.de)
+### Ireland
+- [Indeed Ireland](https://www.indeed.ie)
+- [Monster Ireland](https://www.monster.ie)
+- [Careerjet Ireland](https://www.careerjet.ie)
+- [JobsIreland](https://www.jobsireland.ie)
+- [RecruitIreland](https://www.recruitireland.com)
+### European Union
+- [EU EURES](https://ec.europa.eu)
+## Troubleshooting
+### Auto-fill not working
+1. Ensure you're on a supported job site (see list above)
+2. Make sure you've logged in with a username in the extension
+3. Refresh the job posting page
+4. Check that you're on an actual job posting, not the search page
+### Jobs not saving
+- Ensure you've logged in with a username
+- Check that required fields (Company Name, Job Title, Job Link) are filled
+- Check browser console for errors (F12)
+### Data disappeared
+- Data is stored per username - make sure you're logged in with the correct username
+- Data is stored in browser's IndexedDB - clearing browser data will delete it
+- Export your jobs regularly as backup
+### Export to Excel not working
+- Ensure you have at least one saved job
+- Try exporting a single page first before "Export All"
+- Check browser's download settings/permissions
+

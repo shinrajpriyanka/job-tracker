@@ -1,0 +1,41 @@
+Job Tracker - Never Lose Track of Your Job Applications
+Are you tired of losing track of which jobs you've applied to? Job Tracker is a privacy-focused Chrome extension that helps you organize your job search with local, offline storage.
+KEY FEATURES:
+🎯 Auto-Fill Job Details
+Visit any job posting on LinkedIn, Indeed, or 20+ other job sites, and Job Tracker automatically extracts the company name, job title, and job URL. No more copy-pasting!
+💾 Local Storage - Your Privacy Matters
+All your data stays on YOUR computer. We use browser IndexedDB technology - no external servers, no cloud sync, no tracking. Your job search data is yours alone.
+📊 Powerful Management Features
+- Track application status (Applied, Interview, Offer, Rejected, On Hold)
+- Add recruiter contact information
+- Record response remarks and notes
+- Search and filter your entire job history
+- Country-based organization for international job searches
+📥 Excel Export
+Export your job applications to Excel (.xlsx) format for:
+- Sharing with career counselors
+- Creating backup copies
+- Advanced analysis in spreadsheet software
+- Importing to other tools
+👥 Multi-User Support
+Perfect for households with multiple job seekers. Each family member can have their own profile with separate tracking.
+🎨 Accessibility First
+- Light, Dark, and High Contrast themes
+- Keyboard navigation support
+- Clean, modern interface
+🌐 Supported Job Sites (22+):
+LinkedIn, Indeed (UK/Germany/Ireland), TotalJobs, Reed, CWJobs, Jobsite, Fish4Jobs, Adzuna, StepStone, Monster, XING, EURES, and more!
+PRIVACY & SECURITY:
+✅ 100% local storage
+✅ No account registration required
+✅ No external API calls
+✅ No analytics or tracking
+✅ Open source friendly
+✅ Works offline after initial load
+PERFECT FOR:
+- Active job seekers tracking multiple applications
+- Career changers organizing opportunities
+- Students managing internship applications  
+- Recruiters tracking candidate pipelines
+- Anyone who values privacy in their job search
+Start organizing your job search today with Job Tracker!
